@@ -15,6 +15,7 @@ model User {
   passwordHash        String
   emailVerified       Boolean  @default(false)
   verificationCode    String?
+  verificationExpires DateTime? // ← ADICIONE ESTA LINHA
   resetCode           String?
   resetCodeExpires    DateTime?
   createdAt           DateTime @default(now())
