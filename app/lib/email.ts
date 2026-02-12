@@ -1,14 +1,6 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendVerificationEmail(
   email: string,
@@ -17,8 +9,8 @@ export async function sendVerificationEmail(
   console.log("📧 Enviando email para:", email);
   console.log("🔑 Código:", code);
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+  const { error } = await resend.emails.send({
+    from: "onboarding@resend.dev", // enquanto não verificar domínio
     to: email,
     subject: "Confirme seu email - Rede Hezzuz",
     html: `
@@ -30,6 +22,11 @@ export async function sendVerificationEmail(
       </div>
     `,
   });
+
+  if (error) {
+    console.error("❌ Erro ao enviar email:", error);
+    throw new Error("Erro ao enviar email");
+  }
 
   console.log("✅ Email enviado com sucesso");
 }
