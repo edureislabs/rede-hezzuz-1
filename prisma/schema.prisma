@@ -1,22 +1,16 @@
-// schema.prisma
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id                  Int      @id @default(autoincrement())
-  nickname            String   @unique
-  email               String   @unique
-  passwordHash        String
-  emailVerified       Boolean  @default(false)
-  verificationCode    String?
-  verificationExpires DateTime? // ← ADICIONE ESTA LINHA
-  resetCode           String?
-  resetCodeExpires    DateTime?
-  createdAt           DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  nickname     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
 }

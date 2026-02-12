@@ -7,7 +7,6 @@ import Link from "next/link";
 export default function RegisterPage() {
   const router = useRouter();
   const [nickname, setNickname] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,13 +26,18 @@ export default function RegisterPage() {
       return;
     }
 
+    if (nickname.length < 3) {
+      setError("Nickname deve ter pelo menos 3 caracteres.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname, email, password }),
+        body: JSON.stringify({ nickname, password }),
       });
 
       const data = await res.json();
@@ -44,8 +48,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // ✅ REDIRECIONA PARA VERIFICAÇÃO COM EMAIL PREENCHIDO
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      // Redireciona direto para o perfil (login automático)
+      router.push("/perfil");
       
     } catch (error) {
       setError("Erro de conexão com o servidor.");
@@ -54,10 +58,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4 pt-20">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4">
       <div className="w-full max-w-md bg-black/70 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-white">
         
-        {/* TÍTULO */}
         <h1 className="text-3xl font-extrabold text-center bg-gradient-to-r from-red-500 via-orange-400 to-yellow-300 bg-clip-text text-transparent">
           Criar Conta
         </h1>
@@ -66,10 +69,8 @@ export default function RegisterPage() {
           Junte-se à Rede Hezzuz
         </p>
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           
-          {/* NICKNAME */}
           <div>
             <label className="block text-sm mb-1 text-gray-300">
               Nickname no Minecraft
@@ -85,23 +86,6 @@ export default function RegisterPage() {
             />
           </div>
 
-          {/* EMAIL */}
-          <div>
-            <label className="block text-sm mb-1 text-gray-300">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seuemail@email.com"
-              className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700
-                         focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-
-          {/* SENHA */}
           <div>
             <label className="block text-sm mb-1 text-gray-300">
               Senha
@@ -111,13 +95,12 @@ export default function RegisterPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Mínimo 6 caracteres"
               className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700
                          focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          {/* CONFIRMAR SENHA */}
           <div>
             <label className="block text-sm mb-1 text-gray-300">
               Confirmar Senha
@@ -127,20 +110,18 @@ export default function RegisterPage() {
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Digite novamente"
               className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700
                          focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          {/* ERRO */}
           {error && (
             <div className="p-3 rounded-lg bg-red-900/40">
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
 
-          {/* BOTÃO */}
           <button
             type="submit"
             disabled={loading}
@@ -152,7 +133,6 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        {/* LINKS */}
         <div className="mt-6 text-center text-sm text-gray-400">
           <p>
             Já tem conta?{" "}
@@ -164,7 +144,7 @@ export default function RegisterPage() {
             </Link>
           </p>
 
-          <p className="mt-2">
+          <p className="mt-4">
             <Link href="/" className="hover:text-white transition">
               ← Voltar para o site
             </Link>
