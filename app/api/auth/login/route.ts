@@ -5,42 +5,60 @@ import { prisma } from "../../../lib/prisma";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nickname, password } = body;
+    const { email, password } = body;
 
-    if (!nickname || !password) {
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Nickname e senha são obrigatórios." },
+        { error: "Email ou nickname e senha são obrigatórios." },
         { status: 400 }
       );
     }
 
-    // Busca por nickname
+    // 🔥 BUSCA POR EMAIL OU NICKNAME
     const user = await prisma.user.findFirst({
-      where: { nickname },
+      where: {
+        OR: [
+          { email: email },
+          { nickname: email } // se digitar nickname no campo
+        ],
+      },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: "Nickname ou senha inválidos." },
+        { error: "Credenciais inválidas." },
         { status: 401 }
       );
     }
 
-    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    // 🔐 Verifica senha
+    const passwordValid = await bcrypt.compare(
+      password,
+      user.passwordHash
+    );
 
     if (!passwordValid) {
       return NextResponse.json(
-        { error: "Nickname ou senha inválidos." },
+        { error: "Credenciais inválidas." },
         { status: 401 }
       );
     }
 
-    // Criar cookie de sessão
+    // ⚠️ Se você tiver verificação de email:
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        { error: "Email ainda não verificado" },
+        { status: 403 }
+      );
+    }
+
+    // 🍪 Criar cookie
     const response = NextResponse.json({
       success: true,
       user: {
         id: user.id,
         nickname: user.nickname,
+        email: user.email,
       },
     });
 
@@ -51,7 +69,7 @@ export async function POST(req: Request) {
       path: "/",
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return response;

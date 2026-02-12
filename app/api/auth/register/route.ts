@@ -1,65 +1,71 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "../../../lib/prisma";
+import { sendVerificationEmail } from "../../../lib/email";
+
+function generateVerificationCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { nickname, password } = body; // MUDOU: removeu email
+    const { nickname, email, password } = body;
 
-    if (!nickname || !password) {
+    if (!nickname || !email || !password) {
       return NextResponse.json(
-        { error: "Nickname e senha são obrigatórios." },
+        { error: "Dados inválidos." },
         { status: 400 }
       );
     }
 
-    // Verifica se nickname já existe
-    const existingUser = await prisma.user.findFirst({
+    const emailExists = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (emailExists) {
+      return NextResponse.json(
+        { error: "Email já cadastrado." },
+        { status: 409 }
+      );
+    }
+
+    const nickExists = await prisma.user.findFirst({
       where: { nickname },
     });
 
-    if (existingUser) {
+    if (nickExists) {
       return NextResponse.json(
         { error: "Nickname já está em uso." },
         { status: 409 }
       );
     }
 
-    // Hash da senha
     const passwordHash = await bcrypt.hash(password, 10);
+    const verificationCode = generateVerificationCode();
 
-    // Cria usuário
-    const user = await prisma.user.create({
+    await prisma.user.create({
       data: {
         nickname,
+        email,
         passwordHash,
+        verificationCode,
+        emailVerified: false,
       },
     });
 
-    // Cria cookie automaticamente após registro
-    const response = NextResponse.json({
-      success: true,
-      message: "Conta criada com sucesso!",
-      user: {
-        id: user.id,
-        nickname: user.nickname,
+    // 🔥 ENVIA EMAIL AQUI
+    await sendVerificationEmail(email, verificationCode);
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Conta criada. Verifique seu email.",
       },
-    });
-
-    response.cookies.set({
-      name: "auth-token",
-      value: String(user.id),
-      httpOnly: true,
-      path: "/",
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-    });
-
-    return response;
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Erro no registro:", error);
+    console.error("REGISTER ERROR:", error);
     return NextResponse.json(
       { error: "Erro interno do servidor." },
       { status: 500 }
