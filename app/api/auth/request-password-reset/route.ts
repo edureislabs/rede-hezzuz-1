@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 function generateResetCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     }
 
     const user = await prisma.user.findUnique({ where: { email } });
-    
+
     if (!user) {
       return NextResponse.json(
         { error: "Email não cadastrado." },
@@ -37,17 +37,11 @@ export async function POST(req: Request) {
       },
     });
 
-    // Enviar email (ajuste com suas credenciais)
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    // ✅ Enviar email usando Resend
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
-    await transporter.sendMail({
-      from: `"Rede Hezzuz" <${process.env.EMAIL_USER}>`,
+    const { error } = await resend.emails.send({
+      from: "noreply@site.hezzuz.com",
       to: email,
       subject: "Código para alterar senha",
       html: `
@@ -61,10 +55,15 @@ export async function POST(req: Request) {
           <p style="color: #9ca3af;">Este código expira em 15 minutos.</p>
           <p style="color: #9ca3af;">Se não foi você, ignore este email.</p>
           <hr style="border: none; border-top: 1px solid #374151; margin: 20px 0;">
-          <p style="font-size: 12px; color: #6b7280;">Rede Hezzuz - O melhor servidor de Minecraft</p>
+          <p style="font-size: 12px; color: #6b7280;">Rede Hezzuz</p>
         </div>
       `,
     });
+
+    if (error) {
+      console.error("Erro ao enviar reset:", error);
+      throw new Error("Erro ao enviar email");
+    }
 
     return NextResponse.json({
       success: true,
