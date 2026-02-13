@@ -10,7 +10,7 @@ export async function sendVerificationEmail(
   console.log("🔑 Código:", code);
 
   const { error } = await resend.emails.send({
-    from: "onboarding@resend.dev", // enquanto não verificar domínio
+    from: "noreply@site.hezzuz.com", // enquanto não verificar domínio
     to: email,
     subject: "Confirme seu email - Rede Hezzuz",
     html: `
