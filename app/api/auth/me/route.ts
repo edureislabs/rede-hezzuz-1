@@ -1,31 +1,29 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
+import { verifyToken } from "../../../lib/auth";
 
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    
-    // ❌ ANTES: session.value
-    // ✅ AGORA: auth-token.value
     const authToken = cookieStore.get("auth-token");
 
-    console.log("🔍 Cookie auth-token encontrado?", !!authToken);
-    console.log("🔍 Valor do cookie:", authToken?.value);
-
-    if (!authToken || !authToken.value) {
-      console.log("❌ Nenhum token encontrado");
-      return NextResponse.json({ user: null });
+    if (!authToken?.value) {
+      return NextResponse.json({ user: null }, { status: 401 });
     }
 
-    const userId = parseInt(authToken.value);
-    
+    const decoded = verifyToken(authToken.value);
+
+    if (!decoded) {
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    // ✅ CONVERTE PARA NUMBER
+    const userId = Number(decoded.userId);
+
     if (isNaN(userId)) {
-      console.log("❌ ID do usuário inválido:", authToken.value);
-      return NextResponse.json({ user: null });
+      return NextResponse.json({ user: null }, { status: 401 });
     }
-
-    console.log("🔍 Buscando usuário ID:", userId);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -36,15 +34,14 @@ export async function GET() {
       },
     });
 
-    console.log("👤 Usuário encontrado:", user ? "SIM" : "NÃO");
-
     if (!user) {
-      return NextResponse.json({ user: null });
+      return NextResponse.json({ user: null }, { status: 401 });
     }
 
     return NextResponse.json({ user });
+
   } catch (error) {
     console.error("🔥 ERRO na API /me:", error);
-    return NextResponse.json({ user: null });
+    return NextResponse.json({ user: null }, { status: 500 });
   }
 }

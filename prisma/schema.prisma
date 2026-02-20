@@ -9,17 +9,13 @@ datasource db {
 }
 
 model User {
-  id                  Int      @id @default(autoincrement())
-  nickname            String   @unique
-  email               String   @unique
-  passwordHash        String
-  emailVerified       Boolean  @default(false)
-
-  verificationCode    String?
-  verificationExpires DateTime?   
-
-  resetCode           String?
-  resetCodeExpires    DateTime?
-
-  createdAt           DateTime @default(now())
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  nickname              String   @unique
+  password              String
+  emailVerified         Boolean  @default(false)
+  verificationCode      String?
+  verificationExpires   DateTime?
+  resetCode             String?
+  resetExpires          DateTime?
 }

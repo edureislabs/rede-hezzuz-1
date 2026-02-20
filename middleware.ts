@@ -1,26 +1,23 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifyToken } from "./app/lib/auth";
 
 export function middleware(request: NextRequest) {
-  const response = NextResponse.next()
+  const token = request.cookies.get("auth-token");
 
-  const origin = request.headers.get('origin') || ''
-
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-  ]
-
-  if (allowedOrigins.includes(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin)
-    response.headers.set('Access-Control-Allow-Credentials', 'true')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  return response
+  const decoded = verifyToken(token.value);
+
+  if (!decoded) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/api/:path*'],
-}
+  matcher: ["/perfil/:path*"],
+};

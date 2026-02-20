@@ -1,25 +1,42 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "@/app/lib/prisma";
+import { generateToken } from "@/app/lib/auth";
+import { ratelimit } from "@/app/lib/ratelimit";
 
 export async function POST(req: Request) {
   try {
+    // 🔐 Pega IP corretamente na Vercel
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    const ip = forwardedFor?.split(",")[0] ?? "127.0.0.1";
+
+    // 🚫 Rate limit antes de qualquer coisa
+    const { success } = await ratelimit.limit(ip);
+
+    if (!success) {
+      return NextResponse.json(
+        { error: "Muitas tentativas. Tente novamente." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { email, password } = body;
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email ou nickname e senha são obrigatórios." },
+        { error: "Email/nickname e senha são obrigatórios." },
         { status: 400 }
       );
     }
 
-    // 🔥 BUSCA POR EMAIL OU NICKNAME
+    const normalizedInput = email.toLowerCase().trim();
+
     const user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: email },
-          { nickname: email } // se digitar nickname no campo
+          { email: normalizedInput },
+          { nickname: normalizedInput }
         ],
       },
     });
@@ -31,7 +48,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔐 Verifica senha
     const passwordValid = await bcrypt.compare(
       password,
       user.passwordHash
@@ -44,15 +60,15 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⚠️ Se você tiver verificação de email:
     if (!user.emailVerified) {
       return NextResponse.json(
-        { error: "Email ainda não verificado" },
+        { error: "Email ainda não verificado." },
         { status: 403 }
       );
     }
 
-    // 🍪 Criar cookie
+    const token = generateToken(String(user.id));
+
     const response = NextResponse.json({
       success: true,
       user: {
@@ -64,15 +80,16 @@ export async function POST(req: Request) {
 
     response.cookies.set({
       name: "auth-token",
-      value: String(user.id),
+      value: token,
       httpOnly: true,
-      path: "/",
-      sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
 
     return response;
+
   } catch (error) {
     console.error("Erro no login:", error);
     return NextResponse.json(
