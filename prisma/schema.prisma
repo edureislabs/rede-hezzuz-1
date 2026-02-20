@@ -12,7 +12,7 @@ model User {
   id                    String   @id @default(cuid())
   email                 String   @unique
   nickname              String   @unique
-  password              String
+  passwordHash          String
   emailVerified         Boolean  @default(false)
   verificationCode      String?
   verificationExpires   DateTime?
