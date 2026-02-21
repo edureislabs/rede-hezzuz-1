@@ -15,8 +15,8 @@ export async function GET(req: Request) {
     const payload = jwt.verify(
       token,  
       process.env.JWT_SECRET!
-    ) as { id: string };
-
+    ) as { id: number };
+    
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
       select: {
