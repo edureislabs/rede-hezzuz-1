@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -11,7 +11,31 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showResendButton, setShowResendButton] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
+
+  // ✅ VERIFICAR SE JÁ ESTÁ LOGADO
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Verificar se o token é válido (opcional)
+      fetch("/api/auth/me", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        if (res.ok) {
+          router.push("/perfil"); // Já está logado, redireciona
+        } else {
+          localStorage.removeItem("token"); // Token inválido, remove
+        }
+      })
+      .finally(() => setCheckingAuth(false));
+    } else {
+      setCheckingAuth(false);
+    }
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,14 +66,13 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ SALVAR O TOKEN no localStorage
+      // ✅ SALVAR O TOKEN
       localStorage.setItem("token", data.token);
-      
-      // ✅ Opcional: salvar também info básica do usuário
       localStorage.setItem("userEmail", email);
 
-      alert("Login realizado com sucesso!");
-      router.push("/perfil");
+      // ✅ REDIRECIONAMENTO IMEDIATO
+      window.location.href = "/perfil"; // Usar window.location para forçar reload
+      
     } catch (error) {
       setError("Erro de conexão com o servidor.");
       setLoading(false);
@@ -72,7 +95,7 @@ export default function LoginPage() {
 
       if (res.ok) {
         alert("Código reenviado para seu email!");
-        setError(""); // Limpa o erro
+        setError("");
       } else {
         const data = await res.json();
         setError(data.error || "Erro ao reenviar código.");
@@ -82,6 +105,18 @@ export default function LoginPage() {
     } finally {
       setResendLoading(false);
     }
+  }
+
+  // ✅ MOSTRAR LOADING ENQUANTO VERIFICA AUTENTICAÇÃO
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Verificando autenticação...</p>
+        </div>
+      </main>
+    );
   }
 
   return (

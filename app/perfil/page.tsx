@@ -30,7 +30,7 @@ export default function PerfilPage() {
 
     fetch("/api/auth/me", {
       headers: {
-        "Authorization": `Bearer ${token}` // Envia o token no header
+        "Authorization": `Bearer ${token}`
       }
     })
       .then(async (res) => {
@@ -38,7 +38,7 @@ export default function PerfilPage() {
         
         if (res.status === 401) {
           // Token inválido ou expirado
-          localStorage.removeItem("token"); // Limpa token inválido
+          localStorage.removeItem("token");
           localStorage.removeItem("userEmail");
           router.push("/login");
           return null;
@@ -51,7 +51,6 @@ export default function PerfilPage() {
           throw new Error(data.error);
         }
         
-        // ✅ A API retorna o usuário direto, não { user: ... }
         setUser(data);
       })
       .catch((err) => {
@@ -59,22 +58,19 @@ export default function PerfilPage() {
         setError("Erro ao carregar perfil");
       })
       .finally(() => {
-        console.log("🏁 Carregamento finalizado");
         setLoading(false);
       });
   }, [router]);
 
-  // Função para fazer logout
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (error) {
       console.error("Erro no logout:", error);
     } finally {
-      // Limpa o localStorage e redireciona
       localStorage.removeItem("token");
       localStorage.removeItem("userEmail");
-      window.location.href = "/login";
+      window.location.href = "/login"; // Força reload e redireciona
     }
   };
 
@@ -125,7 +121,6 @@ export default function PerfilPage() {
     <main className="min-h-screen pt-28 px-6 bg-gradient-to-b from-black via-gray-900 to-black text-white">
       <div className="max-w-4xl mx-auto bg-gradient-to-br from-gray-900/80 to-black/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-800">
         
-        {/* Header com avatar */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-20 h-20 rounded-full bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center text-3xl font-bold">
             {user.nickname?.charAt(0).toUpperCase()}
@@ -134,11 +129,10 @@ export default function PerfilPage() {
             <h1 className="text-3xl font-extrabold bg-gradient-to-r from-red-500 via-orange-400 to-yellow-300 bg-clip-text text-transparent">
               {user.nickname}
             </h1>
-            <p className="text-gray-400">Membro desde {new Date().getFullYear()}</p>
+            <p className="text-gray-400">Bem-vindo de volta!</p>
           </div>
         </div>
 
-        {/* Informações do perfil */}
         <div className="space-y-6">
           <div className="p-4 bg-gray-900/50 rounded-xl">
             <span className="text-gray-400 text-sm">Nickname</span>
@@ -149,16 +143,10 @@ export default function PerfilPage() {
             <span className="text-gray-400 text-sm">Email</span>
             <p className="text-lg text-gray-300">{user.email}</p>
           </div>
-
-          <div className="p-4 bg-gray-900/50 rounded-xl">
-            <span className="text-gray-400 text-sm">ID da Conta</span>
-            <p className="text-sm text-gray-500 font-mono">{user.id}</p>
-          </div>
         </div>
 
         <hr className="my-8 border-gray-800" />
 
-        {/* Ações */}
         <div className="grid md:grid-cols-2 gap-4">
           <button 
             onClick={() => router.push("/forgot-password")}
@@ -172,23 +160,6 @@ export default function PerfilPage() {
           </button>
         </div>
 
-        {/* Estatísticas (exemplo) */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div className="bg-gray-900/30 p-4 rounded-xl">
-            <p className="text-2xl font-bold text-orange-400">0</p>
-            <p className="text-xs text-gray-400">Horas jogadas</p>
-          </div>
-          <div className="bg-gray-900/30 p-4 rounded-xl">
-            <p className="text-2xl font-bold text-orange-400">0</p>
-            <p className="text-xs text-gray-400">Amigos</p>
-          </div>
-          <div className="bg-gray-900/30 p-4 rounded-xl">
-            <p className="text-2xl font-bold text-orange-400">0</p>
-            <p className="text-xs text-gray-400">Conquistas</p>
-          </div>
-        </div>
-
-        {/* Logout */}
         <div className="mt-8 text-center">
           <button
             onClick={handleLogout}
