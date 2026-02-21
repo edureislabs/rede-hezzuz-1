@@ -14,27 +14,17 @@ export default function LoginPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
-  // ✅ VERIFICAR SE JÁ ESTÁ LOGADO
+  // ✅ VERIFICAR SESSÃO PELO COOKIE
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      // Verificar se o token é válido (opcional)
-      fetch("/api/auth/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      })
-      .then(res => {
-        if (res.ok) {
-          router.push("/perfil"); // Já está logado, redireciona
-        } else {
-          localStorage.removeItem("token"); // Token inválido, remove
-        }
-      })
-      .finally(() => setCheckingAuth(false));
-    } else {
-      setCheckingAuth(false);
-    }
+    fetch("/api/auth/me", {
+      credentials: "include"
+    })
+    .then(res => {
+      if (res.ok) {
+        router.push("/perfil");
+      }
+    })
+    .finally(() => setCheckingAuth(false));
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -50,13 +40,16 @@ export default function LoginPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        credentials: "include" // 🔥 ESSENCIAL
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.error === "Confirme seu email antes de entrar." || 
-            data.error === "Email ainda não verificado") {
+        if (
+          data.error === "Confirme seu email antes de entrar." ||
+          data.error === "Email ainda não verificado"
+        ) {
           setError("Seu email ainda não foi verificado. Confira sua caixa de entrada.");
           setShowResendButton(true);
         } else {
@@ -66,11 +59,9 @@ export default function LoginPage() {
         return;
       }
 
+      window.location.href = "/perfil";
 
-      // ✅ REDIRECIONAMENTO IMEDIATO
-      window.location.href = "/perfil"; // Usar window.location para forçar reload
-      
-    } catch (error) {
+    } catch {
       setError("Erro de conexão com o servidor.");
       setLoading(false);
     }
@@ -97,14 +88,13 @@ export default function LoginPage() {
         const data = await res.json();
         setError(data.error || "Erro ao reenviar código.");
       }
-    } catch (error) {
+    } catch {
       setError("Erro de conexão.");
     } finally {
       setResendLoading(false);
     }
   }
 
-  // ✅ MOSTRAR LOADING ENQUANTO VERIFICA AUTENTICAÇÃO
   if (checkingAuth) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4">
@@ -120,7 +110,6 @@ export default function LoginPage() {
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4">
       <div className="w-full max-w-md bg-black/70 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-white">
         
-        {/* TÍTULO */}
         <h1 className="text-3xl font-extrabold text-center bg-gradient-to-r from-red-500 via-orange-400 to-yellow-300 bg-clip-text text-transparent">
           Entrar na Conta
         </h1>
@@ -129,10 +118,8 @@ export default function LoginPage() {
           Acesse sua conta da Rede Hezzuz
         </p>
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           
-          {/* EMAIL */}
           <div>
             <label className="block text-sm mb-1 text-gray-300">
               Email ou Nickname
@@ -146,12 +133,10 @@ export default function LoginPage() {
                 setShowResendButton(false);
               }}
               placeholder="Seu email ou nickname"
-              className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700
-                        focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          {/* SENHA */}
           <div>
             <label className="block text-sm mb-1 text-gray-300">
               Senha
@@ -162,22 +147,19 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700
-                        focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-3 rounded-lg bg-black/60 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          {/* MENSAGEM DE ERRO */}
           {error && (
             <div className="p-3 rounded-lg bg-red-900/40 text-sm">
               <p className="text-red-400 mb-2">{error}</p>
-              
               {showResendButton && (
                 <button
                   type="button"
                   onClick={handleResend}
                   disabled={resendLoading}
-                  className="text-sm text-blue-400 hover:text-blue-300 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-sm text-blue-400 hover:text-blue-300 hover:underline disabled:opacity-50"
                 >
                   {resendLoading ? "Enviando..." : "↻ Reenviar código de verificação"}
                 </button>
@@ -185,35 +167,25 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* BOTÃO LOGIN */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg font-bold text-black
-                      bg-gradient-to-r from-red-500 via-orange-400 to-yellow-300
-                      hover:brightness-110 transition-all duration-300 disabled:opacity-50"
+            className="w-full py-3 rounded-lg font-bold text-black bg-gradient-to-r from-red-500 via-orange-400 to-yellow-300 hover:brightness-110 transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
 
-        {/* LINKS */}
         <div className="mt-6 text-center text-sm text-gray-400">
           <p>
             Não tem conta?{" "}
-            <Link
-              href="/register"
-              className="text-orange-400 hover:text-orange-300 font-semibold"
-            >
+            <Link href="/register" className="text-orange-400 hover:text-orange-300 font-semibold">
               Criar conta
             </Link>
           </p>
 
           <p className="mt-2">
-            <Link 
-              href="/forgot-password" 
-              className="text-orange-400 hover:text-orange-300 font-semibold"
-            >
+            <Link href="/forgot-password" className="text-orange-400 hover:text-orange-300 font-semibold">
               Esqueci minha senha
             </Link>
           </p>
