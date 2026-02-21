@@ -18,4 +18,19 @@ model User {
   verificationExpires DateTime?
   resetCode           String?
   resetExpires        DateTime?
+
+  cash                Int       @default(0)
+  purchases           Purchase[]
+}
+
+model Purchase {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  amount      Float
+  cashAmount  Int
+  status      String   // pending | approved | rejected
+  paymentId   String?  @unique
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }

@@ -12,7 +12,9 @@ export function generateToken(userId: string) {
 
 export function verifyToken(token: string) {
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: string };
+    return jwt.verify(token, JWT_SECRET) as {
+      id(arg0: string, id: any): unknown; userId: string 
+};
   } catch {
     return null;
   }
