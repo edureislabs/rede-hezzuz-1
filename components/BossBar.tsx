@@ -23,11 +23,21 @@ export default function BossBar() {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
 
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((data) => setUser(data.user));
-  }, []);
+useEffect(() => {
+  fetch("/api/auth/me", {
+    credentials: "include"
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        setUser(null);
+        return;
+      }
+
+      const data = await res.json();
+      setUser(data); // 🔥 aqui está a correção
+    })
+    .catch(() => setUser(null));
+}, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });

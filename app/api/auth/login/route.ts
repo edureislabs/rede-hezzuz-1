@@ -7,9 +7,14 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
   const { email, password } = await req.json();
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
+const user = await prisma.user.findFirst({
+  where: {
+    OR: [
+      { email },
+      { nickname: email } // mesmo campo do input
+    ]
+  }
+});
 
   if (!user) {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
