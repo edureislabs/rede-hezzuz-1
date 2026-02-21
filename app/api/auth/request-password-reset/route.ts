@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 },
     });
 
-    // 📧 Envia email usando sua lib centralizada
+    
     await sendResetEmail(user.email, resetCode);
 
     return NextResponse.json({
