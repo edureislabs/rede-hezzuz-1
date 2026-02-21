@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
+export const runtime = "nodejs";
 export async function POST(req: Request) {
   const { email, password } = await req.json();
 
@@ -26,11 +26,19 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = jwt.sign(
-    { id: user.id }, // id continua number aqui
-    process.env.JWT_SECRET!,
-    { expiresIn: "7d" }
-  );
+const token = jwt.sign(
+  { id: user.id },
+  process.env.JWT_SECRET!,
+  { expiresIn: "7d" }
+);
+const response = NextResponse.json({ token });
 
-  return NextResponse.json({ token });
+response.cookies.set("auth-token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+});
+
+return response;
+return NextResponse.json({ token });
 }
