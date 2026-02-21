@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showResendButton, setShowResendButton] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
+
 
 
 
@@ -81,17 +81,6 @@ export default function LoginPage() {
     } finally {
       setResendLoading(false);
     }
-  }
-
-  if (checkingAuth) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-red-900 to-orange-900 px-4">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-400">Verificando autenticação...</p>
-        </div>
-      </main>
-    );
   }
 
   return (
