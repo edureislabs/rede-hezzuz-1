@@ -3,21 +3,14 @@ export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
-export async function GET(req: Request) {
-  const cookie = req.headers.get("cookie");
-
-  if (!cookie) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
-
-  const token = cookie
-    .split("; ")
-    .find(c => c.startsWith("auth-token="))
-    ?.split("=")[1];
+export async function GET() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth-token")?.value;
 
   if (!token) {
-    return NextResponse.json({ error: "Token ausente" }, { status: 401 });
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
   try {
@@ -25,6 +18,10 @@ export async function GET(req: Request) {
       token,
       process.env.JWT_SECRET!
     ) as { id: number };
+
+    if (!payload?.id) {
+      return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: payload.id },
@@ -40,7 +37,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(user);
-  } catch {
+  } catch (err) {
     return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
 }
