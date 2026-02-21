@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type User = {
-  id: string;
+  id: number; // agora é number
   nickname: string;
   email: string;
 };
@@ -18,39 +18,24 @@ export default function PerfilPage() {
 
   useEffect(() => {
     console.log("🔄 Carregando perfil...");
-    
-    // Pegar o token do localStorage
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      console.log("❌ Token não encontrado, redirecionando...");
-      router.push("/login");
-      return;
-    }
 
     fetch("/api/auth/me", {
-      headers: {
-        "Authorization": `Bearer ${token}`
-      }
+      credentials: "include", // 🔥 envia cookie automaticamente
     })
       .then(async (res) => {
         console.log("📊 Status da API /me:", res.status);
-        
+
         if (res.status === 401) {
-          // Token inválido ou expirado
-          localStorage.removeItem("token");
-          localStorage.removeItem("userEmail");
           router.push("/login");
           return null;
         }
-        
+
         const data = await res.json();
-        console.log("📦 Dados recebidos:", data);
-        
+
         if (data.error) {
           throw new Error(data.error);
         }
-        
+
         setUser(data);
       })
       .catch((err) => {
@@ -64,13 +49,14 @@ export default function PerfilPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
     } catch (error) {
       console.error("Erro no logout:", error);
     } finally {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userEmail");
-      window.location.href = "/login"; // Força reload e redireciona
+      window.location.href = "/login";
     }
   };
 
