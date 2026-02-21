@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (user.resetCodeExpires && new Date() > user.resetCodeExpires) {
+    if (user.resetExpires && new Date() > user.resetExpires) {
       return NextResponse.json(
         { error: "Código expirado. Solicite um novo." },
         { status: 400 }
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       data: {
         passwordHash,
         resetCode: null,
-        resetCodeExpires: null,
+        resetExpires: null,
       },
     });
 

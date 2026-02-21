@@ -1,32 +1,24 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
-import { verifyToken } from "../../../lib/auth";
+import { prisma } from "@/app/lib/prisma";
+import jwt from "jsonwebtoken";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader) {
+    return NextResponse.json({ error: "Token não fornecido" }, { status: 401 });
+  }
+
+  const token = authHeader.split(" ")[1];
+
   try {
-    const cookieStore = await cookies();
-    const authToken = cookieStore.get("auth-token");
-
-    if (!authToken?.value) {
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
-
-    const decoded = verifyToken(authToken.value);
-
-    if (!decoded) {
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
-
-    // ✅ CONVERTE PARA NUMBER
-    const userId = Number(decoded.userId);
-
-    if (isNaN(userId)) {
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
+    const payload = jwt.verify(
+      token,  
+      process.env.JWT_SECRET!
+    ) as { id: string };
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: payload.id },
       select: {
         id: true,
         nickname: true,
@@ -34,14 +26,8 @@ export async function GET() {
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
-
-    return NextResponse.json({ user });
-
-  } catch (error) {
-    console.error("🔥 ERRO na API /me:", error);
-    return NextResponse.json({ user: null }, { status: 500 });
+    return NextResponse.json(user);
+  } catch {
+    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
 }
