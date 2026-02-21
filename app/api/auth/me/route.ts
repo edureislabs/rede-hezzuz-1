@@ -1,22 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
-export async function GET(req: Request) {
-  const cookie = req.headers.get("cookie");
+export async function GET() {
+  const cookieStore = await cookies();
+  const session = cookieStore.get("session")?.value;
 
-  if (!cookie) {
+  if (!session) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const match = cookie.match(/session=(\d+)/);
-
-  if (!match) {
-    return NextResponse.json({ error: "Sessão inválida" }, { status: 401 });
-  }
-
-  const userId = Number(match[1]);
+  const userId = Number(session);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
