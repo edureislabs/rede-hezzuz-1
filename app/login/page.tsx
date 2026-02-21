@@ -12,20 +12,8 @@ export default function LoginPage() {
   const [showResendButton, setShowResendButton] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const router = useRouter();
 
-  // ✅ VERIFICAR SESSÃO PELO COOKIE
-  useEffect(() => {
-    fetch("/api/auth/me", {
-      credentials: "include"
-    })
-    .then(res => {
-      if (res.ok) {
-        router.push("/perfil");
-      }
-    })
-    .finally(() => setCheckingAuth(false));
-  }, [router]);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
