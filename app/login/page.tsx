@@ -66,9 +66,6 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ SALVAR O TOKEN
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userEmail", email);
 
       // ✅ REDIRECIONAMENTO IMEDIATO
       window.location.href = "/perfil"; // Usar window.location para forçar reload

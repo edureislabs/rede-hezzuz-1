@@ -5,13 +5,20 @@ import { prisma } from "@/app/lib/prisma";
 import jwt from "jsonwebtoken";
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization");
+  const cookie = req.headers.get("cookie");
 
-  if (!authHeader) {
-    return NextResponse.json({ error: "Token não fornecido" }, { status: 401 });
+  if (!cookie) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = cookie
+    .split("; ")
+    .find(c => c.startsWith("auth-token="))
+    ?.split("=")[1];
+
+  if (!token) {
+    return NextResponse.json({ error: "Token ausente" }, { status: 401 });
+  }
 
   try {
     const payload = jwt.verify(
@@ -20,7 +27,7 @@ export async function GET(req: Request) {
     ) as { id: number };
 
     const user = await prisma.user.findUnique({
-      where: { id: Number(payload.id) },
+      where: { id: payload.id },
       select: {
         id: true,
         nickname: true,
@@ -29,10 +36,7 @@ export async function GET(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Usuário não encontrado" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     }
 
     return NextResponse.json(user);
