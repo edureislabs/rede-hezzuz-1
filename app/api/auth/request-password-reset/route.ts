@@ -35,9 +35,9 @@ export async function POST(req: Request) {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        resetCode,
-        resetCodeExpires: expiresAt,
-      },
+  resetCode,
+  resetExpires: expiresAt,
+},
     });
 
     // 📧 Envia email usando sua lib centralizada
