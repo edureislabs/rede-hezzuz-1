@@ -9,7 +9,7 @@ function generateCode() {
 export async function POST(req: Request) {
   const { email } = await req.json();
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findFirst({ where: { email } });
   if (!user) {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
   }
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   const code = generateCode();
   const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-  await prisma.user.update({
+  await prisma.user.updateMany({
     where: { email },
     data: {
       verificationCode: code,

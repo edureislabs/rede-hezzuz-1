@@ -6,7 +6,7 @@ import crypto from "crypto";
 export async function POST(req: Request) {
   const { email } = await req.json();
 
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: { email },
   });
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const code = crypto.randomInt(100000, 999999).toString();
   const expires = new Date(Date.now() + 15 * 60 * 1000);
 
-  await prisma.user.update({
+  await prisma.user.updateMany({
     where: { email },
     data: {
       verificationCode: code,

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: { email },
     });
 
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await prisma.user.update({
+    await prisma.user.updateMany({
       where: { email },
       data: {
         passwordHash,

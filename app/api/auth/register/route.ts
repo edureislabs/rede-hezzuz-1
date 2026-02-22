@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const emailExists = await prisma.user.findUnique({
+    const emailExists = await prisma.user.findFirst ({
       where: { email },
     });
 
