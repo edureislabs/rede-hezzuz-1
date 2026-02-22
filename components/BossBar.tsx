@@ -85,7 +85,7 @@ useEffect(() => {
           </li>
 
           <li>
-            <a href="#" className="flex items-center gap-2 px-4 py-2 rounded-lg text-white hover:bg-green-500/40">
+            <a href="/shop" className="flex items-center gap-2 px-4 py-2 rounded-lg text-white hover:bg-green-500/40">
               <FaShoppingCart className="text-green-300" />
               Loja
             </a>

@@ -22,7 +22,7 @@ export default function ShopPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetch("/api/shop/products")
+    fetch("/api/auth/shop/products")
       .then(res => res.json())
       .then(setProducts);
 
@@ -44,7 +44,7 @@ export default function ShopPage() {
       return;
     }
 
-    const res = await fetch("/api/shop/create-payment", {
+    const res = await fetch("/api/auth/shop/create-payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
