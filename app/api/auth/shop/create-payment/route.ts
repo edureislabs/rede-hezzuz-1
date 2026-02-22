@@ -1,60 +1,67 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import { cookies } from "next/headers";
 
+// ✅ Aceitar POST para webhooks do Mercado Pago
 export async function POST(req: Request) {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("session")?.value;
+  try {
+    // O Mercado Pago envia os dados no corpo da requisição
+    const body = await req.json();
+    console.log("Webhook recebido:", body);
 
-  if (!session) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-  }
-
-  const userId = Number(session);
-  const { productId } = await req.json();
-
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-  });
-
-  if (!product) {
-    return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
-  }
-
-  // cria compra como PENDING
-  const purchase = await prisma.purchase.create({
-    data: {
-      userId,
-      productId,
-      status: "PENDING",
-    },
-  });
-
-  const payment = await fetch("https://api.mercadopago.com/checkout/preferences", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      items: [
-        {
-          title: product.name,
-          quantity: 1,
-          unit_price: product.price,
+    // Extrair informações relevantes
+    const { type, data } = body;
+    
+    // Verificar se é uma notificação de pagamento
+    if (type === "payment") {
+      const paymentId = data.id;
+      
+      // Buscar detalhes do pagamento no Mercado Pago
+      const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
         },
-      ],
-      external_reference: purchase.id,
-      notification_url: `${process.env.NEXT_PUBLIC_URL}/api/shop/webhook`,
-      back_urls: {
-        success: `${process.env.NEXT_PUBLIC_URL}/shop/success`,
-        failure: `${process.env.NEXT_PUBLIC_URL}/shop/failure`,
-      },
-      auto_return: "approved",
-    }),
-  });
+      });
+      
+      const paymentData = await paymentResponse.json();
+      
+      // external_reference é o ID da compra que você enviou
+      const purchaseId = paymentData.external_reference;
+      
+      // Verificar status do pagamento
+      if (paymentData.status === "approved") {
+        // Atualizar compra para aprovada
+        await prisma.purchase.update({
+          where: { id: purchaseId },
+          data: { 
+            status: "APPROVED",
+            paymentId: paymentId.toString(),
+          },
+        });
+        
+        // TODO: Executar comandos no jogo (RCON)
+        console.log(`Pagamento aprovado para compra: ${purchaseId}`);
+      } else {
+        // Atualizar status da compra
+        await prisma.purchase.update({
+          where: { id: purchaseId },
+          data: { 
+            status: paymentData.status === "rejected" ? "REJECTED" : "PENDING",
+            paymentId: paymentId.toString(),
+          },
+        });
+      }
+    }
 
-  const data = await payment.json();
+    // Sempre retornar 200 para o Mercado Pago
+    return NextResponse.json({ received: true }, { status: 200 });
+    
+  } catch (error) {
+    console.error("Erro no webhook:", error);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+  }
+}
 
-  return NextResponse.json({ init_point: data.init_point });
+// (Opcional) Aceitar GET para testes
+export async function GET(req: Request) {
+  return NextResponse.json({ message: "Webhook endpoint ativo" });
 }
