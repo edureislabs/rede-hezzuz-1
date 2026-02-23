@@ -5,98 +5,129 @@ import { Rcon } from "rcon-client";
 export const runtime = "nodejs";
 
 async function processPayment(paymentId: string) {
-  const paymentResponse = await fetch(
-    `https://api.mercadopago.com/v1/payments/${paymentId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-      },
+  console.log("🔎 Iniciando processamento:", paymentId);
+
+  try {
+    console.log("🌎 Buscando pagamento no Mercado Pago...");
+
+    const paymentResponse = await fetch(
+      `https://api.mercadopago.com/v1/payments/${paymentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+        },
+      }
+    );
+
+    console.log("📡 Status HTTP MP:", paymentResponse.status);
+
+    if (!paymentResponse.ok) {
+      console.log("❌ Erro ao consultar pagamento");
+      return;
     }
-  );
 
-  const payment = await paymentResponse.json();
+    const payment = await paymentResponse.json();
+    console.log("💳 Status pagamento:", payment.status);
 
-  console.log("💳 Status pagamento:", payment.status);
+    if (payment.status !== "approved") {
+      console.log("⏳ Pagamento ainda não aprovado");
+      return;
+    }
 
-  if (payment.status !== "approved") return;
+    const purchaseId = payment.external_reference;
+    console.log("🧾 External reference:", purchaseId);
 
-  const purchaseId = payment.external_reference;
-  if (!purchaseId) return;
+    if (!purchaseId) {
+      console.log("❌ Sem external_reference");
+      return;
+    }
 
-  const purchase = await prisma.purchase.findUnique({
-    where: { id: purchaseId },
-    include: { product: true, user: true },
-  });
+    console.log("🔍 Buscando purchase no banco...");
 
-  if (!purchase || purchase.delivered) return;
+    const purchase = await prisma.purchase.findUnique({
+      where: { id: purchaseId },
+      include: { product: true, user: true },
+    });
 
-  await prisma.purchase.update({
-    where: { id: purchaseId },
-    data: {
-      paymentId: paymentId,
-      status: "APPROVED",
-      delivered: true,
-    },
-  });
+    if (!purchase) {
+      console.log("❌ Purchase não encontrada");
+      return;
+    }
 
-  const rcon = await Rcon.connect({
-    host: process.env.RCON_HOST!,
-    port: Number(process.env.RCON_PORT),
-    password: process.env.RCON_PASSWORD!,
-  });
+    console.log("📦 Purchase encontrada:", purchase.id);
+    console.log("📦 Já entregue?", purchase.delivered);
 
-  const command = purchase.product.command.replace(
-    "{player}",
-    purchase.user.nickname
-  );
+    if (purchase.delivered) {
+      console.log("⚠️ Já entregue anteriormente");
+      return;
+    }
 
-  await rcon.send(command);
-  await rcon.end();
+    console.log("💾 Atualizando banco...");
 
-  console.log("🚀 Entrega concluída");
+    await prisma.purchase.update({
+      where: { id: purchaseId },
+      data: {
+        paymentId: paymentId,
+        status: "APPROVED",
+        delivered: true,
+      },
+    });
+
+    console.log("✅ Banco atualizado");
+
+    console.log("🎮 Conectando RCON...");
+
+    const rcon = await Rcon.connect({
+      host: process.env.RCON_HOST!,
+      port: Number(process.env.RCON_PORT),
+      password: process.env.RCON_PASSWORD!,
+    });
+
+    console.log("🎮 RCON conectado");
+
+    const command = purchase.product.command.replace(
+      "{player}",
+      purchase.user.nickname
+    );
+
+    console.log("📤 Enviando comando:", command);
+
+    await rcon.send(command);
+    await rcon.end();
+
+    console.log("🚀 Entrega concluída com sucesso");
+  } catch (err) {
+    console.error("🔥 ERRO processPayment:", err);
+  }
 }
 
 export async function POST(req: Request) {
+  console.log("📩 WEBHOOK RECEBIDO");
+
   try {
     const body = await req.json().catch(() => null);
 
-    if (!body?.data?.id) {
-      return NextResponse.json({ ok: true });
+    console.log("📦 Body:", body);
+
+    const paymentId = body?.data?.id;
+    const action = body?.action;
+
+    console.log("🔔 Action:", action);
+    console.log("🆔 PaymentId:", paymentId);
+
+    const response = NextResponse.json({ ok: true });
+
+    if (paymentId) {
+      setImmediate(() => {
+        processPayment(paymentId);
+      });
+    } else {
+      console.log("⚠️ Webhook sem paymentId");
     }
 
-    const paymentId = body.data.id;
-
-    // 🔥 RESPONDE IMEDIATO PARA O MERCADO PAGO
-    setImmediate(async () => {
-      try {
-        await processPayment(paymentId);
-      } catch (err) {
-        console.error("Erro processamento async:", err);
-      }
-    });
-
-    return NextResponse.json({ ok: true });
+    return response;
   } catch (err) {
-    console.error("Erro webhook:", err);
-    return NextResponse.json({ ok: true }); // sempre 200
+    console.error("🔥 ERRO WEBHOOK:", err);
+    return NextResponse.json({ ok: true });
   }
 }
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const paymentId = searchParams.get("id");
-    const topic = searchParams.get("topic");
-
-    console.log("🔥 IPN GET:", paymentId, topic);
-
-    if (topic !== "payment" || !paymentId)
-      return NextResponse.json({ ok: true });
-
-    await processPayment(paymentId);
-
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("❌ ERRO GET:", err);
-    return NextResponse.json({ error: "Erro" }, { status: 500 });
-  }
-} 
