@@ -58,28 +58,29 @@ async function processPayment(paymentId: string) {
 
 export async function POST(req: Request) {
   try {
-    let body;
+    const body = await req.json().catch(() => null);
 
-    try {
-      body = await req.json();
-    } catch {
-      console.log("⚠️ POST sem JSON");
+    if (!body?.data?.id) {
       return NextResponse.json({ ok: true });
     }
 
-    console.log("🔥 WEBHOOK POST:", body);
+    const paymentId = body.data.id;
 
-    if (!body?.data?.id) return NextResponse.json({ ok: true });
-
-    await processPayment(body.data.id);
+    // 🔥 RESPONDE IMEDIATO PARA O MERCADO PAGO
+    setImmediate(async () => {
+      try {
+        await processPayment(paymentId);
+      } catch (err) {
+        console.error("Erro processamento async:", err);
+      }
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("❌ ERRO POST:", err);
-    return NextResponse.json({ error: "Erro" }, { status: 500 });
+    console.error("Erro webhook:", err);
+    return NextResponse.json({ ok: true }); // sempre 200
   }
 }
-
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -98,4 +99,4 @@ export async function GET(req: Request) {
     console.error("❌ ERRO GET:", err);
     return NextResponse.json({ error: "Erro" }, { status: 500 });
   }
-}
+} 
