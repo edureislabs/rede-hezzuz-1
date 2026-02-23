@@ -6,12 +6,18 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    let body;
+
+    try {
+      body = await req.json();
+    } catch {
+      console.log("⚠️ Webhook sem JSON");
+      return NextResponse.json({ ok: true });
+    }
 
     console.log("🔥 WEBHOOK RECEBIDO:", body);
 
-    // 🔒 Validação mínima segura
-    if (!body.data?.id) {
+    if (!body?.data?.id) {
       console.log("⛔ Webhook sem data.id");
       return NextResponse.json({ ok: true });
     }
